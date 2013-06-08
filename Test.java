@@ -34,8 +34,10 @@ public class Test {
 	}
 
 	public static String undiv_name(String fileName){
-		String[] name = fileName.split("/");
-		return name[name.length-1];
+		String[] splitName = fileName.split("/");
+		String splitLastName = splitName[splitName.length-1];
+		String[] unDivName = splitLastName.split(".div");
+		return unDivName[unDivName.length-1];
 	}
 
 	public static void div_create(String dst){
@@ -64,7 +66,7 @@ public class Test {
 		file.setLastModified(cal.getTimeInMillis());
 
 		// ls -l >ls-l
-		File lsl = new File("ls-l");
+		File lsl = new File(dst + "/ls-l");
 
 		if(! lsl.exists()){
 			try {
@@ -78,7 +80,7 @@ public class Test {
 			FileWriter filewriter = new FileWriter(lsl);
 
 			if(file.canExecute()){
-				filewriter.write("");
+				filewriter.write("z");
 			}else{
 				filewriter.write("-");
 			}
@@ -94,9 +96,12 @@ public class Test {
 			}else{
 				filewriter.write("-");
 			}
+			// TODO çXêVì˙éû
 			filewriter.close();
 		} catch (IOException e) {
 			System.out.println(e);;
 		}
+		
+		file.delete();
 	}
 }

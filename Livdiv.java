@@ -22,7 +22,6 @@ public class Livdiv {
 	}
 
 	// div_name file
-	// TODO
 	public String div_name(String fileName){
 		Pattern p = Pattern.compile("\\.div$|\\.div/$");
 		Matcher m = p.matcher(fileName);
@@ -36,10 +35,11 @@ public class Livdiv {
 	}
 
 	// undiv_name file.div
-	//TODO basename
 	public String undiv_name(String fileName){
-		String[] name = fileName.split("/");
-		return name[name.length-1];
+		String[] splitName = fileName.split("/");
+		String splitLastName = splitName[splitName.length-1];
+		String[] unDivName = splitLastName.split(".div");
+		return unDivName[unDivName.length-1];
 	}
 
 	// div_create file.dir
@@ -69,7 +69,7 @@ public class Livdiv {
 		file.setLastModified(cal.getTimeInMillis());
 
 		// ls -l >ls-l
-		File lsl = new File("ls-l");
+		File lsl = new File(dst + "/ls-l");
 
 		if(! lsl.exists()){
 			try {
@@ -83,7 +83,7 @@ public class Livdiv {
 			FileWriter filewriter = new FileWriter(lsl);
 
 			if(file.canExecute()){
-				filewriter.write("");
+				filewriter.write("z");
 			}else{
 				filewriter.write("-");
 			}
@@ -99,10 +99,14 @@ public class Livdiv {
 			}else{
 				filewriter.write("-");
 			}
+			
 			filewriter.close();
 		} catch (IOException e) {
 			System.out.println(e);;
 		}
+		
+		//TODO rm
+		file.delete();
 	}
 
 	// div_write file.dir
