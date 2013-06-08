@@ -1,9 +1,13 @@
 package splitFile;
 
 public class Div {
-	Livdiv livdiv = new Livdiv();
-	
 	public static void main(String[] args) {
-		// github test
+		Livdiv livdiv = new Livdiv();
+		int length = args.length - 1;
+		
+		for(int i = 0; i < length;i++){
+			String d = args[i] + ".div";
+			livdiv.div_convert(args[i]);
+		}
 	}
 }
