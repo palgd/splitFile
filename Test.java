@@ -7,18 +7,18 @@ import java.io.IOException;
 public class Test {
 	public static void main(String[] args) { 
 		File file = new File(args[0]);
-		File lsl = new File(args[1]);
+		File lsl = new File("ls-l");
 		
 		if(! lsl.exists()){
 			try {
-				file.createNewFile();
+				lsl.createNewFile();
 			} catch (IOException e) {
-				System.out.println(e);;
+				System.out.println(e);
 			}
 		}
 		
 		try {
-			FileWriter filewriter = new FileWriter(file);
+			FileWriter filewriter = new FileWriter(lsl);
 			
 			if(file.canExecute()){
 				filewriter.write("");
@@ -37,8 +37,6 @@ public class Test {
 			}else{
 				filewriter.write("-");
 			}
-
-			
 			filewriter.close();
 		} catch (IOException e) {
 			System.out.println(e);;
