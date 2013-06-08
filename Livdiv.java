@@ -16,7 +16,7 @@ public class Livdiv {
 		if(! file.isDirectory()){
 			div_create(dst);
 		}
-		//TODO aaaa
+		//TODO
 	}
 	
 	// div_name file
