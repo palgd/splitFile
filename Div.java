@@ -8,6 +8,7 @@ public class Div {
 		for(int i = 0; i < length;i++){
 			String d = args[i] + ".div";
 			livdiv.div_convert(args[i]);
+			
 		}
 	}
 }
