@@ -18,6 +18,11 @@ public class Test {
 
 		if(! file.isDirectory()){
 			div_create(dst);
+			try {
+				file.createNewFile();
+			} catch (IOException e) {
+				System.out.println(e);;
+			}
 		}
 	}
 
@@ -46,6 +51,7 @@ public class Test {
 		if(! file.isDirectory()){
 			file.mkdirs();
 			div_create_ls_l(div_name(dst));
+			
 		}
 	}
 	
@@ -97,6 +103,7 @@ public class Test {
 				filewriter.write("-");
 			}
 			// TODO çXêVì˙éû
+			System.out.println(file.lastModified());
 			filewriter.close();
 		} catch (IOException e) {
 			System.out.println(e);;

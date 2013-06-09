@@ -105,7 +105,6 @@ public class Livdiv {
 			System.out.println(e);;
 		}
 		
-		//TODO rm
 		file.delete();
 	}
 
