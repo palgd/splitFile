@@ -1,9 +1,10 @@
 package splitFile;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Calendar;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,11 +19,6 @@ public class Test {
 
 		if(! file.isDirectory()){
 			div_create(dst);
-			try {
-				file.createNewFile();
-			} catch (IOException e) {
-				System.out.println(e);;
-			}
 		}
 	}
 
@@ -47,49 +43,42 @@ public class Test {
 
 	public static void div_create(String dst){
 		File file = new File(dst);
+		File linked = new File(dst + "/linked");
+		File sha1 = new File(dst + "/sha1");
 
 		if(! file.isDirectory()){
 			file.mkdirs();
 			div_create_ls_l(div_name(dst));
-			
-		}
-	}
-	
-	public static void div_create_ls_l(String dst){
-		//touch
-		File file = new File(dst);
-		Calendar cal = Calendar.getInstance();
-
-		int year = cal.get(Calendar.YEAR);
-		int month = cal.get(Calendar.MONTH);
-		int day = cal.get(Calendar.DATE);
-		int hour = cal.get(Calendar.HOUR_OF_DAY);
-		int minute = cal.get(Calendar.MINUTE);
-		int second = cal.get(Calendar.SECOND);
-
-		cal.clear();
-		cal.set(year, month, day, hour, minute, second);
-		file.setLastModified(cal.getTimeInMillis());
-
-		// ls -l >ls-l
-		File lsl = new File(dst + "/ls-l");
-
-		if(! lsl.exists()){
 			try {
-				lsl.createNewFile();
+				linked.createNewFile();
+				sha1.createNewFile();
 			} catch (IOException e) {
 				System.out.println(e);
 			}
 		}
+	}
+
+	public static void div_create_ls_l(String dst){
+		//touch
+		File file = new File(dst +"/" + dst);
+
+		try {
+			file.createNewFile();
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+
+		// ls -l >ls-l
+		File lsl = new File(dst + "/ls-l");
+
+		try {
+			lsl.createNewFile();
+		} catch (IOException e) {
+			System.out.println(e);
+		}
 
 		try {
 			FileWriter filewriter = new FileWriter(lsl);
-
-			if(file.canExecute()){
-				filewriter.write("z");
-			}else{
-				filewriter.write("-");
-			}
 
 			if(file.canRead()){
 				filewriter.write("r");
@@ -102,13 +91,46 @@ public class Test {
 			}else{
 				filewriter.write("-");
 			}
-			// TODO 更新日時
-			System.out.println(file.lastModified());
+
+			if(file.canExecute()){
+				filewriter.write("z");
+			}else{
+				filewriter.write("-");
+			}
+
 			filewriter.close();
 		} catch (IOException e) {
 			System.out.println(e);;
 		}
-		
+
 		file.delete();
+	}
+	
+	public void div_write(String s){
+		String dst = follow_link(s);
+		File file = new File(dst);
+
+		if(! file.isDirectory()){
+			div_create(dst);
+		}
+	}
+	
+	public String follow_link(String s){
+		String src = s + "/link";
+
+		while(new File(src).isFile()){
+			try{
+				FileReader f = new FileReader(src);
+				BufferedReader b = new BufferedReader(f);
+				String cat;
+				while(((cat = b.readLine())!=null)){
+					src = cat;
+				}
+				b.close();
+			}catch(Exception e){
+				System.out.println("ファイル読み込み失敗");
+			}
+		}
+		return src;
 	}
 }
