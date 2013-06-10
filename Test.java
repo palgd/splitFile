@@ -128,7 +128,7 @@ public class Test {
 				}
 				b.close();
 			}catch(Exception e){
-				System.out.println("ƒtƒ@ƒCƒ‹“Ç‚İ‚İ¸”s");
+				System.out.println(e);
 			}
 		}
 		return src;

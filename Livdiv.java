@@ -123,6 +123,7 @@ public class Livdiv {
 		}
 	}
 
+	// follow_link
 	public String follow_link(String s){
 		String src = s + "/link";
 
@@ -136,20 +137,31 @@ public class Livdiv {
 				}
 				b.close();
 			}catch(Exception e){
-				System.out.println("ÉtÉ@ÉCÉãì«Ç›çûÇ›é∏îs");
+				System.out.println(e);
 			}
 		}
 		return src;
 	}
-	
+
 	// TODO
 	public void div_trunc(String s){
 		String dst = follow_link(s);
 		div_part(dst);
 	}
-	
-	
+
+	// TODO
 	public void div_part(String s){
 		String dst = follow_link(s);
+		File file = new File(dst);
+		String[] fileName = file.list();
+		Pattern pm = Pattern.compile("^M");
+		
+		for(int i = 0; i < fileName.length;i++){
+			Matcher mm = pm.matcher(fileName[i]);
+			
+			if(mm.find()){
+				
+			}
+		}
 	}
 }
