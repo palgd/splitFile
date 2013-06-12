@@ -35,7 +35,8 @@ public class Test {
 	}
 
 	public static String undiv_name(String fileName){
-		String splitLastName = new File(fileName).getName();
+		String[] splitName = fileName.split("/");
+		String splitLastName = splitName[splitName.length-1];
 		String[] unDivName = splitLastName.split(".div");
 		return unDivName[unDivName.length-1];
 	}
