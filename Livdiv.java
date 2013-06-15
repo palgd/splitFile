@@ -2,14 +2,18 @@ package splitFile;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Livdiv {
 	private static final String SPLIT_OPTION = "-b 1MB";
+	private ArrayList<String> div_part_list = new ArrayList<String>();
 
 	// div_convert file
 	public void div_convert(String src){
@@ -38,8 +42,7 @@ public class Livdiv {
 
 	// undiv_name file.div
 	public String undiv_name(String fileName){
-		String[] splitName = fileName.split("/");
-		String splitLastName = splitName[splitName.length-1];
+		String splitLastName = new File(fileName).getName();
 		String[] unDivName = splitLastName.split(".div");
 		return unDivName[unDivName.length-1];
 	}
@@ -144,23 +147,62 @@ public class Livdiv {
 	}
 
 	// TODO
+	// div_trunk
 	public void div_trunc(String s){
 		String dst = follow_link(s);
 		div_part(dst);
+		for(int i = 0; i < div_part_list.size(); i++){
+			
+		}
 	}
 
-	// TODO
+	// div_part
 	public void div_part(String s){
-		String dst = follow_link(s);
+		String src = null, dst = follow_link(s);
 		File file = new File(dst);
 		String[] fileName = file.list();
+		ArrayList<String> list = new ArrayList<String>();
 		Pattern pm = Pattern.compile("^M");
-		
-		for(int i = 0; i < fileName.length;i++){
+		Pattern pref = Pattern.compile("$ref");
+
+		for(int i = 0; i < fileName.length; i++){
 			Matcher mm = pm.matcher(fileName[i]);
-			
+
 			if(mm.find()){
+				list.add(fileName[i]);
+			}
+		}
+
+		Collections.sort(list);
+		div_part_list.clear();
+
+		for(int i = 0; i < list.size(); i++){
+			Matcher mref = pref.matcher(list.get(i));
+
+			if(mref.find()){
+				String d = file.getParent();
 				
+				// cat
+				try{
+					FileReader f = new FileReader(d + "/refer");
+					BufferedReader b = new BufferedReader(f);
+					String cat;
+					while(((cat = b.readLine())!=null)){
+						src = cat;
+					}
+					b.close();
+				}catch(FileNotFoundException e){
+					System.out.println(e);
+				}catch(IOException e){
+					System.out.println(e);
+				}
+				
+				// basename
+				String bn = new File(list.get(i)).getName();
+				String[] unDivName = bn.split(".ref");
+				div_part_list.add(src + "/" + unDivName[unDivName.length-1]);
+			}else{
+				div_part_list.add(list.get(i));
 			}
 		}
 	}
