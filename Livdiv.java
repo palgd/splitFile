@@ -1,11 +1,15 @@
 package splitFile;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.regex.Matcher;
@@ -151,10 +155,10 @@ public class Livdiv {
 	public void div_trunc(String s){
 		String dst = follow_link(s);
 		div_parts(dst);
-		
+
 		for(int i = 0; i < div_parts_list.size(); i++){
 			File file = new File(div_parts_list.get(i));
-			
+
 			if(file.isFile()){
 				file.delete();
 			}
@@ -188,7 +192,7 @@ public class Livdiv {
 
 			if(mref.find()){
 				String d = file.getParent();
-				
+
 				// cat
 				try{
 					FileReader f = new FileReader(d + "/refer");
@@ -203,7 +207,7 @@ public class Livdiv {
 				}catch(IOException e){
 					System.out.println(e);
 				}
-				
+
 				// basename
 				String bn = new File(list.get(i)).getName();
 				String[] unDivName = bn.split(".ref");
@@ -213,34 +217,57 @@ public class Livdiv {
 			}
 		}
 	}
-	
+
 	// TODO
+	// div_change_size
 	public void div_change_size(String s){
 		String dst = follow_link(s);
 		int size = div_size(dst);
 		div_replace_ls_l(dst,4,size);
 	}
-	
+
 	// div_size and div_count
 	public int div_size(String s){
 		int size = 0;
-		
+
 		div_parts(s);
-		
+
 		for(int i = 0; i < div_parts_list.size();i++){
 			File file = new File(div_parts_list.get(i));
 			size = size + (int)file.length();
 		}
-			
+
 		return size;
 	}
-	
-	// TODO
-	public void div_change_mtime_now(String s){
-		
-	}
-	
+
+	//TODO
+	// div_replace_ls_l
 	public void div_replace_ls_l(String dst, int n, int val){
-		
+		RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
+		String vmName = bean.getName();
+		long pid = Long.valueOf(vmName.split("@")[0]);
+		String tmp = dst+"div_replace_ls_l."+pid;
+
+		File file = new File(tmp);
+		try {
+			PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(file)));
+			pw.write(div_substr_ls_l(dst,n,val));
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+
 	}
+
+	//TODO
+	// div_substr_ls_l
+	public String div_substr_ls_l(String src, int n, int val){
+		return "";
+	}
+
+	// TODO
+	// div_change_mtime_now
+	public void div_change_mtime_now(String s){
+
+	}
+
 }
