@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 public class Livdiv {
 	private static final String SPLIT_OPTION = "-b 1MB";
-	private ArrayList<String> div_part_list = new ArrayList<String>();
+	private ArrayList<String> div_parts_list = new ArrayList<String>();
 
 	// div_convert file
 	public void div_convert(String src){
@@ -150,15 +150,22 @@ public class Livdiv {
 	// div_trunk
 	public void div_trunc(String s){
 		String dst = follow_link(s);
-		div_part(dst);
-		for(int i = 0; i < div_part_list.size(); i++){
+		div_parts(dst);
+		
+		for(int i = 0; i < div_parts_list.size(); i++){
+			File file = new File(div_parts_list.get(i));
 			
+			if(file.isFile()){
+				file.delete();
+			}
 		}
+		div_change_size(dst);
+		div_change_mtime_now(dst);
 	}
 
 	// div_part
-	public void div_part(String s){
-		String src = null, dst = follow_link(s);
+	public void div_parts(String s){
+		String src = "", dst = follow_link(s);
 		File file = new File(dst);
 		String[] fileName = file.list();
 		ArrayList<String> list = new ArrayList<String>();
@@ -174,7 +181,7 @@ public class Livdiv {
 		}
 
 		Collections.sort(list);
-		div_part_list.clear();
+		div_parts_list.clear();
 
 		for(int i = 0; i < list.size(); i++){
 			Matcher mref = pref.matcher(list.get(i));
@@ -200,10 +207,40 @@ public class Livdiv {
 				// basename
 				String bn = new File(list.get(i)).getName();
 				String[] unDivName = bn.split(".ref");
-				div_part_list.add(src + "/" + unDivName[unDivName.length-1]);
+				div_parts_list.add(src + "/" + unDivName[unDivName.length-1]);
 			}else{
-				div_part_list.add(list.get(i));
+				div_parts_list.add(list.get(i));
 			}
 		}
+	}
+	
+	// TODO
+	public void div_change_size(String s){
+		String dst = follow_link(s);
+		int size = div_size(dst);
+		div_replace_ls_l(dst,4,size);
+	}
+	
+	// div_size and div_count
+	public int div_size(String s){
+		int size = 0;
+		
+		div_parts(s);
+		
+		for(int i = 0; i < div_parts_list.size();i++){
+			File file = new File(div_parts_list.get(i));
+			size = size + (int)file.length();
+		}
+			
+		return size;
+	}
+	
+	// TODO
+	public void div_change_mtime_now(String s){
+		
+	}
+	
+	public void div_replace_ls_l(String dst, int n, int val){
+		
 	}
 }
