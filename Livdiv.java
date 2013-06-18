@@ -69,6 +69,7 @@ public class Livdiv {
 		}
 	}
 
+	// div_create_ls_l
 	public void div_create_ls_l(String dst){
 		//touch
 		File file = new File(dst +"/" + dst);
@@ -104,10 +105,13 @@ public class Livdiv {
 			}
 
 			if(file.canExecute()){
-				filewriter.write("x");
+				filewriter.write("x ");
 			}else{
-				filewriter.write("-");
+				filewriter.write("- ");
 			}
+			
+			String size = String.valueOf(file.length());
+			filewriter.write(size+" ");
 
 			filewriter.close();
 		} catch (IOException e) {
@@ -261,6 +265,7 @@ public class Livdiv {
 	//TODO
 	// div_substr_ls_l
 	public String div_substr_ls_l(String src, int n, int val){
+		
 		return "";
 	}
 
