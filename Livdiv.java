@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
-import java.security.DigestException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -25,9 +24,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Livdiv {
-	private static final String SPLIT_OPTION = "-b 1MB";
-
-	//TODO
 	// divConvert file
 	public void divConvert(String src){
 		String dst = divName(src);
@@ -36,7 +32,8 @@ public class Livdiv {
 		if(! file.isDirectory()){
 			divCreate(dst);
 		}
-
+		divWrite(src,dst);
+		divChangeMtime(dst,src);
 	}
 
 	// divName file
@@ -104,11 +101,7 @@ public class Livdiv {
 		// ls -l >ls-l
 		try {
 			lsl.createNewFile();
-		} catch (IOException e) {
-			System.out.println(e);
-		}
-
-		try {
+			
 			FileWriter fw = new FileWriter(lsl);
 			for(int i = 0; i < lsL.length; i++){
 				fw.write(lsL[i]+" ");
@@ -121,9 +114,8 @@ public class Livdiv {
 		file.delete();
 	}
 
-	// TODO
 	// divWrite file.dir
-	public void divWrite(String s, String src){
+	public void divWrite(String src, String s){
 		String dst = followLink(s);
 		File file = new File(dst);
 
@@ -212,7 +204,7 @@ public class Livdiv {
 					System.out.println(e);
 				}
 
-				// basename
+				// basename .ref
 				String bn = new File(list.get(i)).getName();
 				String[] unDivName = bn.split(".ref");
 				divPartsList.add(src + "/" + unDivName[unDivName.length-1]);
@@ -326,6 +318,7 @@ public class Livdiv {
 		divReplaceLsL(dst, 3, Integer.valueOf(lsL[3]));
 	}
 
+	//TODO
 	//divUpdateSha1
 	public void divUpdateSha1(String s){
 		String dst = followLink(s);
@@ -333,15 +326,34 @@ public class Livdiv {
 		String vmName = bean.getName();
 		long pid = Long.valueOf(vmName.split("@")[0]);
 		String tmp = dst+"/div-update-sha1"+pid;
-		ArrayList<String> list = divParts(dst);
+		ArrayList<String> divPartsList = divParts(dst);
+		File tmpFile = new File(tmp);
+		File dstFile = new File(dst + "/");
 
-		for(int i = 0; i < list.size();i++){
-			if(new File(list.get(i)).lastModified() <= new File(dst + "/sha1").lastModified()){
-
+		try {
+			PrintWriter bw =new PrintWriter(new BufferedWriter(new FileWriter(tmpFile)));
+			for(int i = 0; i < divPartsList.size();i++){
+				if(new File(divPartsList.get(i)).lastModified() <= new File(dst + "/sha1").lastModified()){
+					String sha1 = sha1sum(divPartsList.get(i));
+					File file = new File(divPartsList.get(i));
+					String baseName =file.getName();
+					bw.println(sha1 +" "+ baseName);
+				}else{
+					ArrayList<String> list = grep(divPartsList.get(i), dst+"/sha1");
+					for(int j = 0; j < list.size(); j++){
+						bw.write(list.get(j));
+					}
+				}
 			}
+			bw.close();
+		}catch (IOException e) {
+			System.out.println(e);
 		}
+		tmpFile.renameTo(dstFile);
 	}
 
+	//TODO
+	// divChangeMtimeLast
 	public void divChangeMtimeLast(String s){
 
 	}
@@ -433,9 +445,10 @@ public class Livdiv {
 	}
 
 	// sha1sum
-	public void sha1sum(String file){
+	public String sha1sum(String file){
 		int len=0;
 		byte[] b = new byte[1026];
+		String s = "";
 
 		try{
 			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
@@ -447,16 +460,12 @@ public class Livdiv {
 			bis.close();
 
 			byte[] sha1 = md.digest();
-			System.out.print("SHA1(test.txt)= ");
 			for(int i = 0; i < sha1.length; i++){
-				if(sha1[i] < 16){
-					System.out.print("0"+Integer.toHexString(sha1[i] & 0xff));
-				}else{
-					System.out.print(Integer.toHexString(sha1[i] & 0xff));
+				if(0 < sha1[i] && sha1[i] < 16){
+					s += "0";
 				}
+				s += (Integer.toHexString(sha1[i] & 0xff));
 			}
-			System.out.println();
-
 		}catch(NoSuchAlgorithmException e){
 			System.out.println(e);
 		} catch (FileNotFoundException e) {
@@ -464,5 +473,32 @@ public class Livdiv {
 		} catch (IOException e) {
 			System.out.println(e);
 		}
+		return s;
+	}
+	
+	// grep
+	public ArrayList<String> grep(String pattern, String fileName){
+		ArrayList<String> list = new ArrayList<String>();
+		String line = "";
+		File file = new File(fileName);
+		BufferedReader br;
+		
+		try {
+			br = new BufferedReader(new FileReader(file));
+			Pattern pm = Pattern.compile(pattern);
+			
+			while((line = br.readLine()) != null){
+				Matcher mm = pm.matcher(line);
+				if(mm.find()){
+					list.add(line);
+				}
+			}
+			br.close();
+		}catch(FileNotFoundException e){
+			System.out.println(e);
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+		return list;
 	}
 }
