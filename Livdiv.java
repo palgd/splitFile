@@ -318,7 +318,6 @@ public class Livdiv {
 		divReplaceLsL(dst, 3, Integer.valueOf(lsL[3]));
 	}
 
-	//TODO
 	//divUpdateSha1
 	public void divUpdateSha1(String s){
 		String dst = followLink(s);
@@ -352,12 +351,19 @@ public class Livdiv {
 		tmpFile.renameTo(dstFile);
 	}
 
-	//TODO
 	// divChangeMtimeLast
 	public void divChangeMtimeLast(String s){
-
+		String dst = followLink(s);
+		String last = divLastPart(dst);
+		divChangeMtime(dst,last);
 	}
 
+	//divLastPart
+	public String divLastPart(String s){
+		String dst = followLink(s);
+		ArrayList<String> list = divParts(dst);
+		return list.get(list.size()-1);
+	}
 
 	/*
 	public int[] getLastModified(File file){
