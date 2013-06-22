@@ -14,6 +14,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.security.DigestException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -120,7 +123,7 @@ public class Livdiv {
 
 	// TODO
 	// divWrite file.dir
-	public void divWrite(String s, File src){
+	public void divWrite(String s, String src){
 		String dst = followLink(s);
 		File file = new File(dst);
 
@@ -129,7 +132,10 @@ public class Livdiv {
 		}else{
 			divTrunc(dst);
 		}
-
+		split(src,dst);
+		divUpdateSha1(dst);
+		divChangeSize(dst);
+		divChangeMtimeLast(dst);
 	}
 
 	// followLink
@@ -320,6 +326,27 @@ public class Livdiv {
 		divReplaceLsL(dst, 3, Integer.valueOf(lsL[3]));
 	}
 
+	//divUpdateSha1
+	public void divUpdateSha1(String s){
+		String dst = followLink(s);
+		RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
+		String vmName = bean.getName();
+		long pid = Long.valueOf(vmName.split("@")[0]);
+		String tmp = dst+"/div-update-sha1"+pid;
+		ArrayList<String> list = divParts(dst);
+
+		for(int i = 0; i < list.size();i++){
+			if(new File(list.get(i)).lastModified() <= new File(dst + "/sha1").lastModified()){
+
+			}
+		}
+	}
+
+	public void divChangeMtimeLast(String s){
+
+	}
+
+
 	/*
 	public int[] getLastModified(File file){
 		Calendar cal = Calendar.getInstance();
@@ -370,8 +397,8 @@ public class Livdiv {
 	}
 
 	// split
-	public void split(String outDir, String inFile){
-		int i = 1, size = 0;
+	public void split(String inFile, String outDir){
+		int i = 1, size = 0,ret = -1;
 		boolean isFlag = true;
 		File od = new File(outDir);
 
@@ -382,16 +409,17 @@ public class Livdiv {
 		try {
 			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(inFile));
 			BufferedOutputStream bos = null;
-			byte[] b = new byte[1024];
+			byte[] b = new byte[1026];
 
-			while((bis.read(b)) != -1){
-				if(size >= 1024 || isFlag){
+			while((ret = bis.read(b)) != -1){
+				if(size >= 1026 || isFlag){
 					File outFile = new File(outDir + "/M" + String.format("%018d", i++));
 					outFile.createNewFile();
 					bos = new BufferedOutputStream(new FileOutputStream(outFile));
 					isFlag = false;
 				}
-				bos.write(b);
+				bos.write(b,0,ret);
+				bos.flush();
 				size++;
 			}
 
@@ -402,6 +430,39 @@ public class Livdiv {
 		} catch (IOException e) {
 			System.out.println(e);
 		}
+	}
 
+	// sha1sum
+	public void sha1sum(String file){
+		int len=0;
+		byte[] b = new byte[1026];
+
+		try{
+			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+			MessageDigest md = MessageDigest.getInstance("SHA-1");
+
+			while((len=bis.read(b)) != -1){
+				md.update(b,0,len);
+			}
+			bis.close();
+
+			byte[] sha1 = md.digest();
+			System.out.print("SHA1(test.txt)= ");
+			for(int i = 0; i < sha1.length; i++){
+				if(sha1[i] < 16){
+					System.out.print("0"+Integer.toHexString(sha1[i] & 0xff));
+				}else{
+					System.out.print(Integer.toHexString(sha1[i] & 0xff));
+				}
+			}
+			System.out.println();
+
+		}catch(NoSuchAlgorithmException e){
+			System.out.println(e);
+		} catch (FileNotFoundException e) {
+			System.out.println(e);
+		} catch (IOException e) {
+			System.out.println(e);
+		}
 	}
 }

@@ -1,51 +1,43 @@
 package splitFile;
 
-import java.io.File;
-import java.util.Calendar;
-import java.util.Date;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class Test {
-	public static void main(String[] args) throws Exception{
-		File file = new File(args[0]);
-		String[] s = lsl(file);
-		for(int i = 0; i < s.length; i++){
-			System.out.print(s[i] +" ");
-		}
-		System.out.println();
-	}
-	
-	public static String[] lsl(File file){
-		String[] ls_l = new String[6];
-		Date date = new Date(file.lastModified());
-		Calendar cal = Calendar.getInstance();
-		cal.setTime(date);
+	public static void main(String[] args) {
+		int len=0;
+		byte[] b = new byte[1026];
 
-		int month = cal.get(Calendar.MONTH) + 1;
-		int day = cal.get(Calendar.DATE);
-		int hour = cal.get(Calendar.HOUR_OF_DAY);
-		int minute = cal.get(Calendar.MINUTE);
+		try{
+			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(args[0]));
+			MessageDigest md = MessageDigest.getInstance("SHA-1");
+			
+			while((len=bis.read(b)) != -1){
+				md.update(b,0,len);
+			}
+			bis.close();
+			
+			byte[] sha1 = md.digest();
+			System.out.print("SHA1(test.txt)= ");
+			for(int i = 0; i < sha1.length; i++){
+				if(sha1[i] < 16){
+					System.out.print("0"+Integer.toHexString(sha1[i] & 0xff));
+				}else{
+					System.out.print(Integer.toHexString(sha1[i] & 0xff));
+				}
+			}
+			System.out.println();
 
-		if(file.canRead()){
-			ls_l[0] = "r";
-		}else{
-			ls_l[0] = "-";
+		}catch(NoSuchAlgorithmException e){
+			System.out.println(e);
+		} catch (FileNotFoundException e) {
+			System.out.println(e);
+		} catch (IOException e) {
+			System.out.println(e);
 		}
-		if(file.canWrite()){
-			ls_l [0] += "w";
-		}else{
-			ls_l [0] += "-";
-		}
-		if(file.canExecute()){
-			ls_l [0] += "x";
-		}else{
-			ls_l [0] += "-";
-		}
-		ls_l[1] = String.valueOf(file.length());
-		ls_l[2] = String.valueOf(month);
-		ls_l[3] = String.valueOf(day);
-		ls_l[4] = String.valueOf(hour) + ":" + String.valueOf(minute);
-		ls_l[5] = file.getName();
-		
-		return ls_l;
 	}
 }
