@@ -404,4 +404,8 @@ public class Livdiv {
 			file.setLastModified(lsl.lastModified());
 		}
 	}
+	
+	public void divConcat(){
+		
+	}
 }

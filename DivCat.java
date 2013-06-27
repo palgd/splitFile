@@ -5,16 +5,21 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DivCat {
 	public static void main(String[] args) {
-		String arg = "", options = "";
+		String arg = "", option = "";
 		int ch = 0;
 		Livdiv livdiv = new Livdiv();
-		Pattern p = Pattern.compile("-.");
+		Pattern p = Pattern.compile("^-.$");
+		Pattern p1 = Pattern.compile("^.$");
 
 		for(int i = 0; i < args.length; i++){
+			Matcher m = p.matcher(args[i]);
+			Matcher m1 = p1.matcher(args[i]);
+			
 			try {
 				BufferedReader br = new BufferedReader(new FileReader(new File(args[i])));
 				if(args[i].equals("--help") || args[i].equals("--version")){
@@ -24,9 +29,11 @@ public class DivCat {
 					br.close();
 					return;
 				}else if(args[i].equals("-")){
-					
-				}else if(true){
-					
+					arg += arg + args[i];
+				}else if(m.find()){
+					option += option + args[i];
+				}else if(m1.find()){
+					arg += arg + args[i];
 				}
 				br.close();
 			}catch (FileNotFoundException e) {
@@ -34,6 +41,12 @@ public class DivCat {
 			} catch (IOException e) {
 				System.out.println(e);
 			}
+		}
+		
+		if(! arg.equals("")){
+			
+		}else{
+			livdiv.divConcat();
 		}
 	}
 }
