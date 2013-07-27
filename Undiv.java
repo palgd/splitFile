@@ -3,9 +3,9 @@ package splitFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Undiv {
+public class UnDiv {
 	public static void main(String[] args) {
-		Livdiv livdiv = new Livdiv();
+		Libdiv livdiv = new Libdiv();
 		Pattern p = Pattern.compile("\\.div$|\\.div/$");
 		
 		for(int i = 0; i < args.length; i++){

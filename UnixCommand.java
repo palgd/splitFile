@@ -9,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public class UnixCommand {
 
 	// ls -l
 	public String[] lsl(File file){
-		String[] lsL = new String[6];
+		String[] l = new String[6];
 		Date date = new Date(file.lastModified());
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(date);
@@ -45,32 +46,33 @@ public class UnixCommand {
 		int minute = cal.get(Calendar.MINUTE);
 
 		if(file.canRead()){
-			lsL[0] = "r";
+			l[0] = "r";
 		}else{
-			lsL[0] = "-";
+			l[0] = "-";
 		}
 		if(file.canWrite()){
-			lsL [0] += "w";
+			l [0] += "w";
 		}else{
-			lsL [0] += "-";
+			l [0] += "-";
 		}
 		if(file.canExecute()){
-			lsL [0] += "x";
+			l [0] += "x";
 		}else{
-			lsL [0] += "-";
+			l [0] += "-";
 		}
-		lsL[1] = String.valueOf(file.length());
-		lsL[2] = String.valueOf(month);
-		lsL[3] = String.valueOf(day);
-		lsL[4] = String.valueOf(hour) + ":" + String.valueOf(minute);
-		lsL[5] = file.getName();
+		l[1] = String.valueOf(file.length());
+		l[2] = String.valueOf(month);
+		l[3] = String.valueOf(day);
+		l[4] = String.valueOf(hour) + ":" + String.valueOf(minute);
+		l[5] = file.getName();
 
-		return lsL;
+		return l;
 	}
 
 	// split
-	public void split(String inFile, String outDir){
-		int i = 1, size = 0,ret = -1;
+	//public void split(String inFile, String outDir, String prefix){
+	public void split(BufferedInputStream bigData, String outDir, String prefix){
+		int i = 0, size = 0,ret = -1;
 		boolean isFlag = true;
 		File od = new File(outDir);
 
@@ -79,13 +81,14 @@ public class UnixCommand {
 		}
 
 		try {
-			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(inFile));
+			//BufferedInputStream bis = new BufferedInputStream(new FileInputStream(inFile));
+			BufferedInputStream bis = bigData;
 			BufferedOutputStream bos = null;
-			byte[] b = new byte[1026];
+			byte[] b = new byte[1024];
 
 			while((ret = bis.read(b)) != -1){
-				if(size >= 1026 || isFlag){
-					File outFile = new File(outDir + "/M" + String.format("%018d", i++));
+				if(size >= 1024 || isFlag){
+					File outFile = new File(outDir + "/" + prefix + String.format("%018d", i++));
 					outFile.createNewFile();
 					bos = new BufferedOutputStream(new FileOutputStream(outFile));
 					isFlag = false;
@@ -122,7 +125,7 @@ public class UnixCommand {
 
 			byte[] sha1 = md.digest();
 			for(int i = 0; i < sha1.length; i++){
-				if(0 < sha1[i] && sha1[i] < 16){
+				if(0 <= sha1[i] && sha1[i] < 16){
 					s += "0";
 				}
 				s += (Integer.toHexString(sha1[i] & 0xff));
@@ -162,4 +165,125 @@ public class UnixCommand {
 		}
 		return list;
 	}
+
+	// cat
+	public void cat(ArrayList<String> option, ArrayList<String> list){
+		String[] splitFileName;
+		String deleteFileName = "";
+		BufferedInputStream bis = null;
+		BufferedOutputStream bos = null;
+		byte[] b = new byte[1024];
+		int a = -1;
+		try{
+			for(int i = 0; i < list.size(); i++){
+				File file = new File(list.get(i));
+				bis = new BufferedInputStream(new FileInputStream(file));
+				bos = new BufferedOutputStream(System.out);
+				while((a = bis.read(b)) != -1){
+					bos.write(b,0,a);
+				}
+				bos.close();
+				splitFileName = list.get(i).split("tmpFile");
+				deleteFileName = splitFileName[splitFileName.length-1];
+				if(file.getName().equals("tmpFile" + deleteFileName)){
+					file.delete();
+				}
+			}
+		}catch(IOException e){
+			System.out.println(e);
+		}
+	}
+	
+	//cat 
+	public void cat(ArrayList<String> option){
+		BufferedReader br = null;
+		String s = null;
+
+		try{
+			br = new BufferedReader(new InputStreamReader(System.in));
+			while((s = br.readLine()) != null){
+				if(option.isEmpty()){
+					System.out.print(s);
+				}
+			}
+		}catch(IOException e){
+			System.out.println(e);
+		}
+	}
+	/*
+	// cat
+	public void cat(ArrayList<String> option, ArrayList<String> list){
+		String[] splitFileName;
+		String deleteFileName;
+		BufferedReader br = null;
+		int lineCount = 1;
+		String s = "";
+
+		try {
+			for(int i = 0; i < list.size(); i++){
+				if(list.get(i).equals("-")){
+					cat(option);
+				}else{
+					File file = new File(list.get(i));
+					br = new BufferedReader(new FileReader(file));
+					
+					while((s = br.readLine()) != null){
+						if(option.contains("-s")){
+							if(s.equals("")){
+								while((s = br.readLine()) != null && s.equals("")){}
+								
+								System.out.println();
+							}
+							System.out.println(s);
+						}
+
+						if(option.isEmpty()){
+							System.out.println(s);
+						}
+
+						if(option.contains("-b")){
+							if(! s.equals("")) System.out.println(lineCount++ + "  " + s);
+							if(s.equals("") | option.contains("-s")) System.out.println();
+						}else if(option.contains("-n")){
+							System.out.println(lineCount + "  " + s);
+							lineCount++;
+						}
+					}
+					splitFileName = list.get(i).split("tmpFile");
+					deleteFileName = splitFileName[splitFileName.length-1];
+					if(file.getName().equals("tmpFile" + deleteFileName)){
+						file.delete();
+					}
+				}
+			}
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+	}
+
+
+	// cat
+	public void cat(ArrayList<String> option){
+		BufferedReader br = null;
+		int count = 1;
+		String s = "";
+
+		try{
+			br = new BufferedReader(new InputStreamReader(System.in));
+			while((s = br.readLine()) != null){
+				if(option.isEmpty()){
+					System.out.print(s);
+				}
+				
+				if(option.contains("-b")){
+					if(! s.equals("")) System.out.println(count++ + "  " + s);
+					if(s.equals("")) System.out.println();
+				}else if(option.contains("-n")){
+					System.out.println(count++ + "  " + s);
+				}
+			}
+		}catch(IOException e){
+			System.out.println(e);
+		}
+	}*/
 }
