@@ -149,17 +149,6 @@ public class Libdiv {
 			divTrunc(dst);
 		}
 		
-		/*try {
-			bos = new BufferedOutputStream(new FileOutputStream(tmp));
-			while((n = bis.read(b)) != -1){
-				bos.write(b, 0, n);
-			}
-		} catch (FileNotFoundException e) {
-			System.out.println(e);
-		} catch (IOException e) {
-			System.out.println(e);
-		}*/
-		
 		cmd.split(bis, dst, "M");
 		
 		divUpdateSha1(dst);
@@ -364,7 +353,7 @@ public class Libdiv {
 		File dstFile = new File(dst + "/sha1");
 
 		try {
-			PrintWriter bw =new PrintWriter(new BufferedWriter(new FileWriter(tmpFile)));
+			PrintWriter bw = new PrintWriter(new BufferedWriter(new FileWriter(tmpFile)));
 			for(int i = 0; i < divPartsList.size();i++){
 				if(new File(divPartsList.get(i)).lastModified() <= 
 						new File(dst + "/sha1").lastModified()){
@@ -483,6 +472,7 @@ public class Libdiv {
 		File file = new File(dst);
 		Pattern p = Pattern.compile("^x");
 		BufferedInputStream bis = new BufferedInputStream(System.in);
+		BufferedOutputStream bos = null;
 		RandomAccessFile raf = null;
 		
 
@@ -501,12 +491,15 @@ public class Libdiv {
 				raf = new RandomAccessFile(lastFile,"rw");
 				
 				byte[] b = new byte[1024];
-				int ret = -1;
+				int len = -1;
 				long l = raf.length();
 				raf.seek(l);
-				while((ret = bis.read(b)) != -1){
-					raf.write(b,0,ret);
+				bos = new BufferedOutputStream(new FileOutputStream(raf.getFD()));
+				while((len = bis.read(b)) != -1){
+					bos.write(b,0,len);
 				}
+				bos.flush();
+				bos.close();
 				bis = new BufferedInputStream(new FileInputStream(lastFile));
 
 				cmd.split(bis,dst, "x");

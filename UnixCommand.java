@@ -72,7 +72,7 @@ public class UnixCommand {
 	// split
 	//public void split(String inFile, String outDir, String prefix){
 	public void split(BufferedInputStream bigData, String outDir, String prefix){
-		int i = 0, size = 0,ret = -1;
+		int i = 0, size = 0,len = -1;
 		boolean isFlag = true;
 		File od = new File(outDir);
 
@@ -86,7 +86,7 @@ public class UnixCommand {
 			BufferedOutputStream bos = null;
 			byte[] b = new byte[1024];
 
-			while((ret = bis.read(b)) != -1){
+			while((len = bis.read(b)) != -1){
 				if(size >= 1024 || isFlag){
 					File outFile = new File(outDir + "/" + prefix + String.format("%018d", i++));
 					outFile.createNewFile();
@@ -94,7 +94,7 @@ public class UnixCommand {
 					isFlag = false;
 					size = 0;
 				}
-				bos.write(b,0,ret);
+				bos.write(b,0,len);
 				bos.flush();
 				size++;
 			}
@@ -111,7 +111,7 @@ public class UnixCommand {
 	// sha1sum
 	public String sha1sum(String file){
 		int len=0;
-		byte[] b = new byte[1026];
+		byte[] b = new byte[1024];
 		String s = "";
 
 		try{
