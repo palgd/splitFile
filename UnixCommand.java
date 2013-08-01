@@ -10,6 +10,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -70,8 +71,7 @@ public class UnixCommand {
 	}
 
 	// split
-	//public void split(String inFile, String outDir, String prefix){
-	public void split(BufferedInputStream bigData, String outDir, String prefix){
+	public void split(BufferedInputStream bigData, String outDir){
 		int i = 0, size = 0,len = -1;
 		boolean isFlag = true;
 		File od = new File(outDir);
@@ -81,15 +81,14 @@ public class UnixCommand {
 		}
 
 		try {
-			//BufferedInputStream bis = new BufferedInputStream(new FileInputStream(inFile));
 			BufferedInputStream bis = bigData;
 			BufferedOutputStream bos = null;
 			byte[] b = new byte[1024];
 
 			while((len = bis.read(b)) != -1){
 				if(size >= 1024 || isFlag){
-					File outFile = new File(outDir + "/" + prefix + String.format("%018d", i++));
-					outFile.createNewFile();
+					File outFile = new File(outDir + "/M" + String.format("%018d", i++));
+					if(! outFile.exists()) outFile.createNewFile();
 					bos = new BufferedOutputStream(new FileOutputStream(outFile));
 					isFlag = false;
 					size = 0;
@@ -97,6 +96,47 @@ public class UnixCommand {
 				bos.write(b,0,len);
 				bos.flush();
 				size++;
+			}
+
+			bis.close();
+			bos.close();
+		} catch (FileNotFoundException e) {
+			System.out.println(e);
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+	}
+
+	// split
+	public void split(BufferedInputStream bigData, String outDir, int i){
+		int len = -1;
+		boolean isFlag = true;
+		File od = new File(outDir);
+
+		if(! od.exists()){
+			od.mkdir();
+		}
+
+		try {
+			BufferedInputStream bis = bigData;
+			BufferedOutputStream bos = null;
+			RandomAccessFile raf = null;
+			byte[] b = new byte[1024];
+
+			while((len = bis.read(b)) != -1){
+				if(isFlag || raf.length() >= 1024 * 1024){
+					File outFile = new File(outDir + "/M" + String.format("%018d", i++));
+					raf = new RandomAccessFile(outFile, "rw");
+					if(outFile.exists()){
+						raf.seek(raf.length());
+					}else{
+						outFile.createNewFile();
+					}
+					bos = new BufferedOutputStream(new FileOutputStream(raf.getFD()));
+					isFlag = false;
+				}
+				bos.write(b,0,len);
+				bos.flush();
 			}
 
 			bis.close();
@@ -169,31 +209,44 @@ public class UnixCommand {
 	// cat
 	public void cat(ArrayList<String> option, ArrayList<String> list){
 		String[] splitFileName;
-		String deleteFileName = "";
+		String deleteFileName = "", s;
 		BufferedInputStream bis = null;
 		BufferedOutputStream bos = null;
 		byte[] b = new byte[1024];
-		int a = -1;
+		int n = -1;
+		
 		try{
 			for(int i = 0; i < list.size(); i++){
-				File file = new File(list.get(i));
-				bis = new BufferedInputStream(new FileInputStream(file));
-				bos = new BufferedOutputStream(System.out);
-				while((a = bis.read(b)) != -1){
-					bos.write(b,0,a);
-				}
-				bos.close();
-				splitFileName = list.get(i).split("tmpFile");
-				deleteFileName = splitFileName[splitFileName.length-1];
-				if(file.getName().equals("tmpFile" + deleteFileName)){
-					file.delete();
+				
+				if(list.get(i).equals("-")){
+					BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+					while((s = br.readLine()) != null){
+						if(option.isEmpty()){
+							System.out.println(s);
+						}
+					}
+				}else{
+					File file = new File(list.get(i));
+					bis = new BufferedInputStream(new FileInputStream(file));
+					bos = new BufferedOutputStream(System.out);
+					while((n = bis.read(b)) != -1){
+						bos.write(b,0,n);
+					}
+					bos.flush();
+					splitFileName = list.get(i).split("tmpFile");
+					deleteFileName = splitFileName[splitFileName.length-1];
+					if(file.getName().equals("tmpFile" + deleteFileName)){
+						file.delete();
+					}
 				}
 			}
+			bis.close();
+			bos.close();
 		}catch(IOException e){
 			System.out.println(e);
 		}
 	}
-	
+
 	//cat 
 	public void cat(ArrayList<String> option){
 		BufferedReader br = null;
@@ -226,12 +279,12 @@ public class UnixCommand {
 				}else{
 					File file = new File(list.get(i));
 					br = new BufferedReader(new FileReader(file));
-					
+
 					while((s = br.readLine()) != null){
 						if(option.contains("-s")){
 							if(s.equals("")){
 								while((s = br.readLine()) != null && s.equals("")){}
-								
+
 								System.out.println();
 							}
 							System.out.println(s);
@@ -274,7 +327,7 @@ public class UnixCommand {
 				if(option.isEmpty()){
 					System.out.print(s);
 				}
-				
+
 				if(option.contains("-b")){
 					if(! s.equals("")) System.out.println(count++ + "  " + s);
 					if(s.equals("")) System.out.println();
