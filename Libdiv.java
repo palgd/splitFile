@@ -48,7 +48,7 @@ public class Libdiv {
 		}
 	}
 
-	// undivName file.div
+	// unDivName file.div
 	public String unDivName(String fileName){
 		//String splitLastName = new File(fileName).getName();
 		//String[] unDivName = splitLastName.split(".div");
@@ -131,7 +131,7 @@ public class Libdiv {
 		} catch (FileNotFoundException e) {
 			System.out.println(e);
 		}
-		cmd.split(bis, dst, "M");
+		cmd.split(bis, dst);
 		divUpdateSha1(dst);
 		divChangeSize(dst);
 		divChangeMtimeLast(dst);
@@ -149,18 +149,7 @@ public class Libdiv {
 			divTrunc(dst);
 		}
 		
-		/*try {
-			bos = new BufferedOutputStream(new FileOutputStream(tmp));
-			while((n = bis.read(b)) != -1){
-				bos.write(b, 0, n);
-			}
-		} catch (FileNotFoundException e) {
-			System.out.println(e);
-		} catch (IOException e) {
-			System.out.println(e);
-		}*/
-		
-		cmd.split(bis, dst, "M");
+		cmd.split(bis, dst);
 		
 		divUpdateSha1(dst);
 		divChangeSize(dst);
@@ -298,6 +287,7 @@ public class Libdiv {
 		}
 
 		file.setLastModified(lsl.lastModified());
+		lsl.delete();
 		file.renameTo(lsl);
 
 	}
@@ -364,7 +354,7 @@ public class Libdiv {
 		File dstFile = new File(dst + "/sha1");
 
 		try {
-			PrintWriter bw =new PrintWriter(new BufferedWriter(new FileWriter(tmpFile)));
+			PrintWriter bw = new PrintWriter(new BufferedWriter(new FileWriter(tmpFile)));
 			for(int i = 0; i < divPartsList.size();i++){
 				if(new File(divPartsList.get(i)).lastModified() <= 
 						new File(dst + "/sha1").lastModified()){
@@ -383,6 +373,7 @@ public class Libdiv {
 		}catch (IOException e) {
 			System.out.println(e);
 		}
+		dstFile.delete();
 		tmpFile.renameTo(dstFile);
 	}
 
@@ -418,8 +409,8 @@ public class Libdiv {
 	// divRead
 	public File divRead(String s){
 		int ch = -1, fileList;
-		File f = new File(s);
-		File file = new File("tmpFile" + f.getName());
+		File f = new File(unDivName(s));
+		File file = new File(f.getName());
 		byte[] b = new byte[1024];
 		BufferedInputStream bis = null;
 		BufferedOutputStream bos = null;
@@ -483,6 +474,7 @@ public class Libdiv {
 		File file = new File(dst);
 		Pattern p = Pattern.compile("^x");
 		BufferedInputStream bis = new BufferedInputStream(System.in);
+		BufferedOutputStream bos = null;
 		RandomAccessFile raf = null;
 		
 
@@ -492,30 +484,33 @@ public class Libdiv {
 		
 		String last = divLastPart(dst);
 		File lastFile = new File(dst +"/"+last);
-
-		try {
+		n = divLastPartNumber(dst);
+		//try {
 			if(last.length() == 0){
-				cmd.split(bis,dst, "x");
+				cmd.split(bis,dst);
 			} else{
-				n = divLastPartNumber(dst);
-				raf = new RandomAccessFile(lastFile,"rw");
+				/*raf = new RandomAccessFile(lastFile,"rw");
 				
 				byte[] b = new byte[1024];
-				int ret = -1;
+				int len = -1;
 				long l = raf.length();
 				raf.seek(l);
-				while((ret = bis.read(b)) != -1){
-					raf.write(b,0,ret);
+				bos = new BufferedOutputStream(new FileOutputStream(raf.getFD()));
+				while((len = bis.read(b)) != -1){
+					bos.write(b,0,len);
 				}
+				bos.flush();
+				bos.close();
 				bis = new BufferedInputStream(new FileInputStream(lastFile));
-
-				cmd.split(bis,dst, "x");
-			} 
-		}catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		String[] fileList = file.list();
+				*/
+				cmd.split(bis,dst, n);
+			}
+		//}catch (IOException e) {
+			//e.printStackTrace();
+		//}
+		
+		/*String[] fileList = file.list();
+		int tmpN = divLastPartNumber(dst);
 		for(int i = 0; i < fileList.length; i++){
 			Matcher m = p.matcher(fileList[i]);
 
@@ -523,7 +518,14 @@ public class Libdiv {
 				File xFile = new File(dst + "/" + fileList[i]);
 				String d = divPart(n);
 				File lastPartFile = new File(dst + "/" + d);
-				xFile.renameTo(lastPartFile);
+				//if(n == tmpN) if(lastPartFile.delete()) System.out.println(lastPartFile + " is delete");
+				Path p1 = Paths.get(dst + "/" + fileList[i]);
+				try {
+					Files.move(p1, p1.resolveSibling(d), StandardCopyOption.REPLACE_EXISTING);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				//if(xFile.renameTo(lastPartFile))System.out.println(xFile + " ¨ " + lastPartFile);
 
 				File rmFile = new File(dst + "/" + d + ".ref");
 				if(rmFile.isFile()){
@@ -531,12 +533,14 @@ public class Libdiv {
 				}
 				n++;
 			}
-		}
+		}*/
 
-		divUpdateSha1(dst);
+
+		//divUpdateSha1(dst);
 		divChangeSize(dst);
 		divUpdateMtime(dst);
 	}
+
 
 	// divLastPartNumber
 	public int divLastPartNumber(String dst){
@@ -547,12 +551,12 @@ public class Libdiv {
 	public int divPartNumber(String s){
 		int num = 0;
 		if(s.length() == 0){
-			System.out.println("0");
+			return num;
 		}else{
 			String basename = s.split("/")[s.split("/").length - 1];
 			num =  Integer.valueOf( basename.replaceAll("[a-zA-Z]", ""));
+			return num;
 		}
-		return num;
 	}
 
 	// divUpdateMtime
