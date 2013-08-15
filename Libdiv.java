@@ -26,13 +26,14 @@ public class Libdiv {
 
 	// divConvert file
 	public void divConvert(String src){
-		String dst = divName(src);
-
-		if(! new File(dst).isDirectory()){
-			divCreate(dst);
+		String outDirName = divName(src);
+		File outDir = new File(outDirName);
+		
+		if(! outDir.isDirectory()){
+			divCreate(outDirName);
 		}
-		divWrite(src,dst);
-		divChangeMtime(dst,src);
+		divWrite(src,outDirName);
+		divChangeMtime(outDirName,src);
 	}
 
 	// divName file
@@ -57,15 +58,15 @@ public class Libdiv {
 	}
 
 	// divCreate file.dir
-	public void divCreate(String dst){
-		File file = new File(dst);
-		File linked = new File(dst + "/linked");
-		File sha1 = new File(dst + "/sha1");
-		File lsl = new File(dst+"/ls-l");
+	public void divCreate(String outDirName){
+		File file = new File(outDirName);
+		File linked = new File(outDirName + "/linked");
+		File sha1 = new File(outDirName + "/sha1");
+		File lsl = new File(outDirName+"/ls-l");
 
 		if(! file.isDirectory()){
 			file.mkdirs();
-			divCreateLsL(dst);
+			divCreateLsL(outDirName);
 			if(! linked.exists() && ! sha1.exists()){
 				try {
 					linked.createNewFile();
