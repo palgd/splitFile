@@ -12,98 +12,81 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.RandomAccessFile;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Libdiv {
-	UnixCommand cmd = new UnixCommand();
-
-	// divConvert file
-	public void divConvert(String src){
-		String outDirName = divName(src);
-		File outDir = new File(outDirName);
-		
-		if(! outDir.isDirectory()){
-			divCreate(outDirName);
-		}
-		divWrite(src,outDirName);
-		divChangeMtime(outDirName,src);
-	}
-
+	
 	// divName file
-	public String divName(String fileName){
+	public File divName(File file){
 		Pattern p = Pattern.compile("\\.div$|\\.div/$");
-		Matcher m = p.matcher(fileName);
+		Matcher m = p.matcher(file.getPath());
 
 		if(m.find()){
-			String name = unDivName(fileName) + ".div";
-			return name;
+			return file;
 		}else{
-			return fileName +".div";
+			return new File(file.getPath() +".div");
 		}
 	}
 
 	// unDivName file.div
-	public String unDivName(String fileName){
-		//String splitLastName = new File(fileName).getName();
-		//String[] unDivName = splitLastName.split(".div");
-		String[] unDivName = fileName.split(".div");
-		return unDivName[unDivName.length-1];
-	}
+	public File unDivName(File file){
+		Pattern p = Pattern.compile("\\.div$|\\.div/$");
+		Matcher m = p.matcher(file.getPath());
 
-	// divCreate file.dir
-	public void divCreate(String outDirName){
-		File file = new File(outDirName);
-		File linked = new File(outDirName + "/linked");
-		File sha1 = new File(outDirName + "/sha1");
-		File lsl = new File(outDirName+"/ls-l");
-
-		if(! file.isDirectory()){
-			file.mkdirs();
-			divCreateLsL(outDirName);
-			if(! linked.exists() && ! sha1.exists()){
-				try {
-					linked.createNewFile();
-					sha1.createNewFile();
-				} catch (IOException e) {
-					System.out.println(e);
-				}
-			}else{
-				linked.setLastModified(lsl.lastModified());
-				sha1.setLastModified(lsl.lastModified());
-			}
+		if(m.find()){
+			String[] unDivName = file.getPath().split(".div");
+			return new File(unDivName[unDivName.length-1]);
+		}else{
+			return file;
 		}
 	}
 
+	// divCreate directory
+	public void divCreate(File outDir){
+		File linked = new File(outDir.getPath() + "/linked");
+		File sha1 = new File(outDir.getPath() + "/sha1");
+		File lsl = new File(outDir.getPath() + "/ls-l");
+
+		if(! outDir.isDirectory()){
+			outDir.mkdirs();
+			divCreateLsL(outDir);
+
+			linked.setLastModified(lsl.lastModified());
+			sha1.setLastModified(lsl.lastModified());
+
+			createFile(linked);
+			createFile(sha1);
+		}
+	}
+
+	//TODO
 	// divCreateLsL
-	public void divCreateLsL(String dst){
-		File f = new File(dst);
-		File file = new File(dst +"/" + f.getName());
-		File lsl = new File(dst + "/ls-l");
+	public void divCreateLsL(File outDir){
+		File tmpFile = new File(outDir.getPath() +"/" + outDir.getName());
+		File lsl = new File(outDir.getPath() + "/ls-l");
 		Calendar cal = Calendar.getInstance();
 
 		//touch
-		if(! file.exists()){
-			try {
-				file.createNewFile();
-			} catch (IOException e) {
-				System.out.println("tes");
-			}
-		}else{
-			file.setLastModified(cal.getTimeInMillis());
+		if(tmpFile.exists()){
+			tmpFile.setLastModified(cal.getTimeInMillis());
 		}
 
-		String[] l = cmd.lsl(file);
+		createFile(tmpFile);
+
+		String[] l = ls_l(tmpFile);
 
 		// ls -l >ls-l
+		createFile(lsl);
 		try {
-			lsl.createNewFile();
 			FileWriter fw = new FileWriter(lsl);
 			for(int i = 0; i < l.length; i++){
 				fw.write(l[i]+" ");
@@ -113,87 +96,89 @@ public class Libdiv {
 			System.out.println(e);
 		}
 
-		file.delete();
+		tmpFile.delete();
 	}
 
-	// divWrite file dir
-	public void divWrite(String src, String s){
-		String dst = followLink(s);
-		File file = new File(dst);
-		BufferedInputStream bis = null;
+	//	// divWrite file, directory
+	//	public void divWrite(File bigFile, File outDir){
+	//		File newOutDir = followLink(outDir);
+	//		BufferedInputStream bis = bufferedFileInputStreamInstance(bigFile);
+	//
+	//		if(! newOutDir.isDirectory()){
+	//			divCreate(newOutDir);
+	//		}else{
+	//			divTrunc(newOutDir);
+	//		}
+	//
+	//		cmd.split(bis, newOutDir);
+	//		divUpdateSha1(newOutDir);
+	//		divChangeSize(newOutDir);
+	//		divChangeMtimeLast(newOutDir);
+	//	}
 
-		if(! file.isDirectory()){
-			divCreate(dst);
-		}else{
-			divTrunc(dst);
-		}
-		try {
-			bis = new BufferedInputStream(new FileInputStream(new File(src)));
-		} catch (FileNotFoundException e) {
-			System.out.println(e);
-		}
-		cmd.split(bis, dst);
-		divUpdateSha1(dst);
-		divChangeSize(dst);
-		divChangeMtimeLast(dst);
-	}
-	
-	//divWrite dir
-	public void divWrite(String s){
-		String dst = followLink(s);
-		File file = new File(dst);
-		BufferedInputStream bis = new BufferedInputStream(System.in);
+	//	//divWrite directory
+	//	public void divWrite(File outDir){
+	//		File newOutDir = followLink(outDir);
+	//		BufferedInputStream bis = new BufferedInputStream(System.in);
+	//
+	//		if(! newOutDir.isDirectory()){
+	//			divCreate(newOutDir);
+	//		}else{
+	//			divTrunc(newOutDir);
+	//		}
+	//
+	//		cmd.split(bis, newOutDir);
+	//
+	//		divUpdateSha1(newOutDir);
+	//		divChangeSize(newOutDir);
+	//		divChangeMtimeLast(newOutDir);
+	//	}
 
-		if(! file.isDirectory()){
-			divCreate(dst);
-		}else{
-			divTrunc(dst);
-		}
-		
-		cmd.split(bis, dst);
-		
-		divUpdateSha1(dst);
-		divChangeSize(dst);
-		divChangeMtimeLast(dst);
-	}
+	// followLink directory
+	public File followLink(File dir){
+		String tmp, newDirName = null;
 
-	// followLink
-	public String followLink(String src){
-		while(new File(src+"/link").isFile()){
+		while(new File(dir+"/link").isFile()){
 			try{
-				BufferedReader b = new BufferedReader(new FileReader(src));
-				String cat;
-				while(((cat = b.readLine())!=null)){
-					src = cat;
+				BufferedReader b = new BufferedReader(new FileReader(dir));
+				while(((tmp = b.readLine())!=null)){
+					newDirName = tmp;
 				}
 				b.close();
 			}catch(Exception e){
 				System.out.println(e);
 			}
 		}
-		return src;
-	}
 
-	// divTrunk
-	public void divTrunc(String s){
-		String dst = followLink(s);
-		ArrayList<String> divPartsList = divParts(dst);
-
-		for(int i = 0; i < divPartsList.size(); i++){
-			File file = new File(dst + "/" + divPartsList.get(i));
-
-			if(file.isFile()){
-				file.delete();
-			}
+		if(newDirName != null){
+			File newDir = new File(newDirName);
+			return newDir;
 		}
-		divChangeSize(dst);
-		divChangeMtimeNow(dst);
+
+		return dir;
 	}
+
+	//	// divTrunk directory
+	//	public void divTrunc(File outDir){
+	//		File dst = followLink(outDir);
+	//		ArrayList<String> divPartsList = divParts(dst);
+	//
+	//		for(int i = 0; i < divPartsList.size(); i++){
+	//			File file = new File(dst + "/" + divPartsList.get(i));
+	//
+	//			if(file.isFile()){
+	//				file.delete();
+	//			}
+	//		}
+	//
+	//		divChangeSize(dst);
+	//		divChangeMtimeNow(dst);
+	//	}
 
 	// divParts
-	public ArrayList<String> divParts(String s){
-		String src = "", dst = followLink(s);
-		File file = new File(dst);
+	public ArrayList<String> divParts(File f){
+		String src = "";
+		File file = followLink(f);
 		String[] fileName = file.list();
 		ArrayList<String> list = new ArrayList<String>();
 		ArrayList<String> divPartsList = new ArrayList<String>();
@@ -218,8 +203,7 @@ public class Libdiv {
 				String d = file.getParent();
 
 				try{
-					FileReader f = new FileReader(d + "/refer");
-					BufferedReader b = new BufferedReader(f);
+					BufferedReader b = new BufferedReader(new FileReader(d + "/refer"));
 					src = b.readLine();
 					b.close();
 				}catch(FileNotFoundException e){
@@ -240,17 +224,17 @@ public class Libdiv {
 	}
 
 	// divChangeSize
-	public void divChangeSize(String s){
-		String dst = followLink(s);
+	public void divChangeSize(File f){
+		File dst = followLink(f);
 		int size = divSize(dst);
 		divReplaceLsL(dst,1,size);
 	}
 
 	// divSize and divCount
-	public int divSize(String s){
+	public int divSize(File f){
 		int size = 0;
 
-		ArrayList<String> divPartsList = divParts(s);
+		ArrayList<String> divPartsList = divParts(f);
 
 		for(int i = 0; i < divPartsList.size();i++){
 			File file = new File(divPartsList.get(i));
@@ -261,7 +245,7 @@ public class Libdiv {
 	}
 
 	// divReplaceLsL
-	public void divReplaceLsL(String dst, int n, int val){
+	public void divReplaceLsL(File dst, int n, int val){
 		RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
 		String vmName = bean.getName();
 		long pid = Long.valueOf(vmName.split("@")[0]);
@@ -270,13 +254,8 @@ public class Libdiv {
 		File file = new File(tmp);
 		File lsl = new File(dst+"/ls-l");
 
-		if(!file.exists()){
-			try {
-				file.createNewFile();
-			} catch (IOException e) {
-				System.out.println(e);
-			}
-		}
+		createFile(file);
+
 		try {
 			PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(file)));
 			for (int i = 0; i < sa.length; i++){
@@ -294,10 +273,10 @@ public class Libdiv {
 	}
 
 	// divSubstrLsL
-	public String[] divSubstrLsL(String src, int n, int val){
+	public String[] divSubstrLsL(File src, int n, int val){
 		String[] sa = null;
 		try {
-			BufferedReader b = new BufferedReader(new FileReader(src+"/ls-l"));
+			BufferedReader b = new BufferedReader(new FileReader(src.getPath() + "/ls-l"));
 			sa = b.readLine().split(" ");
 			sa[n] = String.valueOf(val);
 			b.close();
@@ -310,46 +289,41 @@ public class Libdiv {
 	}
 
 	// divChangeMtimeNow
-	public void divChangeMtimeNow(String s){
+	public void divChangeMtimeNow(File f){
 		RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
 		String vmName = bean.getName();
 		long pid = Long.valueOf(vmName.split("@")[0]);
-		String dst = followLink(s);
-		String now = dst + "now."+ pid;
+		File dstFile = followLink(f);
+		String now = dstFile.getPath() + "now."+ pid;
 		File file = new File(now);
 		Calendar cal = Calendar.getInstance();
 
-		if(! file.exists()){
-			try {
-				file.createNewFile();
-			} catch (IOException e) {
-				System.out.println(e);
-			}
-		}else{
+		if(file.exists()){
 			file.setLastModified(cal.getTimeInMillis());
 		}
 
-		divChangeMtime(dst,now);
+		createFile(file);
+
+		divChangeMtime(dstFile,file);
 		file.delete();
 	}
 
 	// divChangeMtime
-	public void divChangeMtime(String s,String last){
-		String dst = followLink(s);
-		File file = new File(last);
-		String[] lsL = cmd.lsl(file);
+	public void divChangeMtime(File outDir,File last){
+		File dst = followLink(outDir);
+		String[] lsL = ls_l(last);
 
 		divReplaceLsL(dst, 2, Integer.valueOf(lsL[2]));
 		divReplaceLsL(dst, 3, Integer.valueOf(lsL[3]));
 	}
 
 	//divUpdateSha1
-	public void divUpdateSha1(String s){
-		String dst = followLink(s);
+	public void divUpdateSha1(File f){
+		File dst = followLink(f);
 		RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
 		String vmName = bean.getName();
 		long pid = Long.valueOf(vmName.split("@")[0]);
-		String tmp = dst+"/div-update-sha1"+pid;
+		String tmp = dst.getPath() + "/div-update-sha1"+pid;
 		ArrayList<String> divPartsList = divParts(dst);
 		File tmpFile = new File(tmp);
 		File dstFile = new File(dst + "/sha1");
@@ -359,12 +333,12 @@ public class Libdiv {
 			for(int i = 0; i < divPartsList.size();i++){
 				if(new File(divPartsList.get(i)).lastModified() <= 
 						new File(dst + "/sha1").lastModified()){
-					String sha1 = cmd.sha1sum(dst+"/"+divPartsList.get(i));
+					String sha1 = sha1sum(dst+"/"+divPartsList.get(i));
 					File file = new File(divPartsList.get(i));
 					String baseName =file.getName();
 					bw.println(sha1 +" "+ baseName);
 				}else{
-					ArrayList<String> list = cmd.grep(dst+"/"+divPartsList.get(i), dst+"/sha1");
+					ArrayList<String> list = grep(dst+"/"+divPartsList.get(i), dst+"/sha1");
 					for(int j = 0; j < list.size(); j++){
 						bw.write(list.get(j));
 					}
@@ -379,48 +353,47 @@ public class Libdiv {
 	}
 
 	// divChangeMtimeLast
-	public void divChangeMtimeLast(String s){
-		String dst = followLink(s);
-		String last = divLastPart(dst);
-		divChangeMtime(dst,last);
+	public void divChangeMtimeLast(File f){
+		File dstFile = followLink(f);
+		File last = divLastPart(dstFile);
+		divChangeMtime(dstFile,last);
 	}
 
 	//divLastPart
-	public String divLastPart(String s){
-		String dst = followLink(s);
+	public File divLastPart(File f){
+		File dst = followLink(f);
 		ArrayList<String> list = divParts(dst);
 		if(list.size() == 0){
-			return "";
+			return null;
 		}
-		return list.get(list.size()-1);
+		File file = new File(list.get(list.size()-1));
+		return file;
 	}
 
-	//divRestore
-	public void divRestore(String s){
-		String dst = unDivName(s);
-		String src = divName(dst);
-		File file = new File(dst);
-		File tmpFile = divRead(src);
-		
-		tmpFile.renameTo(new File(file.getName()));
-
-		divRestoreTime(src);
-	}
+	//	//divRestore
+	//	public void divRestore(File s){
+	//		File dst = unDivName(s);
+	//		File src = divName(dst);
+	//		File tmpFile = divRead(src);
+	//
+	//		tmpFile.renameTo(new File(dst.getName()));
+	//
+	//		divRestoreTime(src);
+	//	}
 
 	// divRead
-	public File divRead(String s){
+	public File divRead(File f){
 		int ch = -1, fileList;
-		File f = new File(unDivName(s));
-		File file = new File(f.getName());
+		File file = new File("tmpFile" + unDivName(f).getName());
 		byte[] b = new byte[1024];
 		BufferedInputStream bis = null;
 		BufferedOutputStream bos = null;
-		ArrayList<String> list = divParts(s);
+		ArrayList<String> list = divParts(f);
 		fileList = list.size();
-		
+
 		for(int i = 0; i < fileList; i++){
 			try {
-				bis = new BufferedInputStream(new FileInputStream(s+"/"+list.get(i)));
+				bis = new BufferedInputStream(new FileInputStream(f+"/"+list.get(i)));
 				bos = new BufferedOutputStream(new FileOutputStream(file,true));;
 				while((ch = bis.read(b)) != -1){
 					bos.write(b,0,ch);
@@ -433,140 +406,273 @@ public class Libdiv {
 				System.out.println(e);
 			}
 		}
-		
+
 		return file;
 	}
 
-	//divRestoreTime
-	public void divRestoreTime(String s){
-		String src = followLink(s);
-		String dst = unDivName(s);
-		File file = new File(dst);
-		File lsl = new File(src +"/ls-l");
+	//	//divRestoreTime
+	//	public void divRestoreTime(File s){
+	//		File src = followLink(s);
+	//		File file = unDivName(s);
+	//		File lsl = new File(src +"/ls-l");
+	//
+	//		if(file.isFile() && lsl.isFile()){
+	//			file.setLastModified(lsl.lastModified());
+	//		}
+	//	}
 
-		if(file.isFile() && lsl.isFile()){
-			file.setLastModified(lsl.lastModified());
-		}
-	}
+	//	// divConcat
+	//	public ArrayList<String> divConcat(ArrayList<String> s){
+	//		ArrayList<String> list = new ArrayList<String>();
+	//		Pattern p = Pattern.compile("\\.div$|\\.div/$");
+	//
+	//		for(int i = 0; i < s.size(); i++){
+	//			Matcher m = p.matcher(s.get(i));
+	//
+	//			if(m.find()){
+	//				File file = divRead(new File(s.get(i)));
+	//				list.add(file.getPath());
+	//			}else{
+	//				list.add(s.get(i));
+	//			}
+	//		}
+	//
+	//		return list;
+	//	}
 
-	// divConcat
-	public ArrayList<String> divConcat(ArrayList<String> s){
-		ArrayList<String> list = new ArrayList<String>();
-		Pattern p = Pattern.compile("\\.div$|\\.div/$");
-
-		for(int i = 0; i < s.size(); i++){
-			Matcher m = p.matcher(s.get(i));
-
-			if(m.find()){
-				File file = divRead(s.get(i));
-				list.add(file.getPath());
-			}else{
-				list.add(s.get(i));
-			}
-		}
-		
-		return list;
-	}
-
-	// divAppend
-	public void divAppend(String s){
-		int n = 0;
-		String dst = followLink(s);
-		File file = new File(dst);
-		Pattern p = Pattern.compile("^x");
-		BufferedInputStream bis = new BufferedInputStream(System.in);
-		BufferedOutputStream bos = null;
-		RandomAccessFile raf = null;
-		
-
-		if( ! file.isDirectory()){
-			divCreate(dst);
-		}
-		
-		String last = divLastPart(dst);
-		File lastFile = new File(dst +"/"+last);
-		n = divLastPartNumber(dst);
-		//try {
-			if(last.length() == 0){
-				cmd.split(bis,dst);
-			} else{
-				/*raf = new RandomAccessFile(lastFile,"rw");
-				
-				byte[] b = new byte[1024];
-				int len = -1;
-				long l = raf.length();
-				raf.seek(l);
-				bos = new BufferedOutputStream(new FileOutputStream(raf.getFD()));
-				while((len = bis.read(b)) != -1){
-					bos.write(b,0,len);
-				}
-				bos.flush();
-				bos.close();
-				bis = new BufferedInputStream(new FileInputStream(lastFile));
-				*/
-				cmd.split(bis,dst, n);
-			}
-		//}catch (IOException e) {
-			//e.printStackTrace();
-		//}
-		
-		/*String[] fileList = file.list();
-		int tmpN = divLastPartNumber(dst);
-		for(int i = 0; i < fileList.length; i++){
-			Matcher m = p.matcher(fileList[i]);
-
-			if(m.find()){
-				File xFile = new File(dst + "/" + fileList[i]);
-				String d = divPart(n);
-				File lastPartFile = new File(dst + "/" + d);
-				//if(n == tmpN) if(lastPartFile.delete()) System.out.println(lastPartFile + " is delete");
-				Path p1 = Paths.get(dst + "/" + fileList[i]);
-				try {
-					Files.move(p1, p1.resolveSibling(d), StandardCopyOption.REPLACE_EXISTING);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				//if(xFile.renameTo(lastPartFile))System.out.println(xFile + " ¨ " + lastPartFile);
-
-				File rmFile = new File(dst + "/" + d + ".ref");
-				if(rmFile.isFile()){
-					rmFile.delete();
-				}
-				n++;
-			}
-		}*/
-
-
-		//divUpdateSha1(dst);
-		divChangeSize(dst);
-		divUpdateMtime(dst);
-	}
+//	// divAppend
+//	public void divAppend(File f){
+//		int n = 0;
+//		File dst = followLink(f);
+//		Pattern p = Pattern.compile("^x");
+//		BufferedInputStream bis = new BufferedInputStream(System.in);
+//		BufferedOutputStream bos = null;
+//		RandomAccessFile raf = null;
+//
+//
+//		if( ! dst.isDirectory()){
+//			divCreate(dst);
+//		}
+//
+//		File last = divLastPart(dst);
+//		File lastFile = new File(dst +"/"+last);
+//		n = divLastPartNumber(dst);
+//		//try {
+//		if(last.length() == 0){
+//			cmd.split(bis,dst);
+//		} else{
+//			/*raf = new RandomAccessFile(lastFile,"rw");
+//
+//				byte[] b = new byte[1024];
+//				int len = -1;
+//				long l = raf.length();
+//				raf.seek(l);
+//				bos = new BufferedOutputStream(new FileOutputStream(raf.getFD()));
+//				while((len = bis.read(b)) != -1){
+//					bos.write(b,0,len);
+//				}
+//				bos.flush();
+//				bos.close();
+//				bis = new BufferedInputStream(new FileInputStream(lastFile));
+//			 */
+//			cmd.split(bis,dst, n);
+//		}
+//		//}catch (IOException e) {
+//		//e.printStackTrace();
+//		//}
+//
+//		/*String[] fileList = file.list();
+//		int tmpN = divLastPartNumber(dst);
+//		for(int i = 0; i < fileList.length; i++){
+//			Matcher m = p.matcher(fileList[i]);
+//
+//			if(m.find()){
+//				File xFile = new File(dst + "/" + fileList[i]);
+//				String d = divPart(n);
+//				File lastPartFile = new File(dst + "/" + d);
+//				//if(n == tmpN) if(lastPartFile.delete()) System.out.println(lastPartFile + " is delete");
+//				Path p1 = Paths.get(dst + "/" + fileList[i]);
+//				try {
+//					Files.move(p1, p1.resolveSibling(d), StandardCopyOption.REPLACE_EXISTING);
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				}
+//				//if(xFile.renameTo(lastPartFile))System.out.println(xFile + " ¨ " + lastPartFile);
+//
+//				File rmFile = new File(dst + "/" + d + ".ref");
+//				if(rmFile.isFile()){
+//					rmFile.delete();
+//				}
+//				n++;
+//			}
+//		}*/
+//
+//
+//		divUpdateSha1(dst);
+//		divChangeSize(dst);
+//		divUpdateMtime(dst);
+//	}
 
 
 	// divLastPartNumber
-	public int divLastPartNumber(String dst){
+	public int divLastPartNumber(File dst){
 		return divPartNumber(divLastPart(dst));
 	}
 
 	// divPartNumber
-	public int divPartNumber(String s){
-		int num = 0;
-		if(s.length() == 0){
-			return num;
+	public int divPartNumber(File f){
+		int fileNum = 0;
+
+		if(f == null){
+			return fileNum;
 		}else{
-			String basename = s.split("/")[s.split("/").length - 1];
-			num =  Integer.valueOf( basename.replaceAll("[a-zA-Z]", ""));
-			return num;
+			String basename = f.getPath().split("/")[f.getPath().split("/").length - 1];
+			fileNum =  Integer.valueOf( basename.replaceAll("[a-zA-Z]", ""));
+			return fileNum;
 		}
 	}
 
 	// divUpdateMtime
-	public void divUpdateMtime(String s){
-		divChangeMtimeLast(s);
+	public void divUpdateMtime(File file){
+		divChangeMtimeLast(file);
 	}
 
 	// divPart
 	public String divPart(int n){
-		return "M" + String.format("%018d", n);
+		String fileName = "M" + String.format("%018d", n);
+		return fileName;
+	}
+
+	// bufferedInputStreamInstance 
+	protected BufferedInputStream bufferedFileInputStreamInstance(File file){
+		try {
+			return new BufferedInputStream(new FileInputStream(file));
+		} catch (FileNotFoundException e) {
+			System.out.println(e);
+		}
+		return null;
+	}
+
+	// bufferedOutputStreamInstance
+	public BufferedOutputStream bufferedFileOutputStreamInstance(File file){
+		try {
+			return new BufferedOutputStream(new FileOutputStream(file));
+		} catch (FileNotFoundException e) {
+			System.out.println(e);
+		}
+		return null;
+	}
+
+	// createFile
+	private void createFile(File file){
+		if(! file.exists()){
+			try {
+				file.createNewFile();
+			} catch (IOException e) {
+				System.out.println(e);
+			}
+		}
+	}
+
+	// grep
+	public ArrayList<String> grep(String pattern, String fileName){
+		ArrayList<String> list = new ArrayList<String>();
+		String line = "";
+		File file = new File(fileName);
+		BufferedReader br;
+
+		try {
+			br = new BufferedReader(new FileReader(file));
+			Pattern pm = Pattern.compile(pattern);
+
+			while((line = br.readLine()) != null){
+				Matcher mm = pm.matcher(line);
+				if(mm.find()){
+					list.add(line);
+				}
+			}
+			br.close();
+		}catch(FileNotFoundException e){
+			System.out.println(e);
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+		return list;
+	}
+
+	// sha1sum
+	public String sha1sum(String file){
+		int len=0;
+		byte[] b = new byte[1024];
+		String s = "";
+
+		try{
+			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+			MessageDigest md = MessageDigest.getInstance("SHA-1");
+
+			while((len=bis.read(b)) != -1){
+				md.update(b,0,len);
+			}
+			bis.close();
+
+			byte[] sha1 = md.digest();
+			for(int i = 0; i < sha1.length; i++){
+				if(0 <= sha1[i] && sha1[i] < 16){
+					s += "0";
+				}
+				s += (Integer.toHexString(sha1[i] & 0xff));
+			}
+		}catch(NoSuchAlgorithmException e){
+			System.out.println(e);
+		} catch (FileNotFoundException e) {
+			System.out.println(e);
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+		return s;
+	}
+
+	// ls -l
+	public String[] ls_l(File file){
+		//String s = "";
+		String[] l = new String[6];
+		Date date = new Date(file.lastModified());
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(date);
+
+		int month = cal.get(Calendar.MONTH) + 1;
+		int day = cal.get(Calendar.DATE);
+		int hour = cal.get(Calendar.HOUR_OF_DAY);
+		int minute = cal.get(Calendar.MINUTE);
+
+		if(file.canRead()){
+			//s = "r";
+			l[0] = "r";
+		}else{
+			//s = "-";
+			l[0] = "-";
+		}
+		if(file.canWrite()){
+			//s += "w";
+			l [0] += "w";
+		}else{
+			//s += "-";
+			l [0] += "-";
+		}
+		if(file.canExecute()){
+			//s += "x";
+			l [0] += "x";
+		}else{
+			//s += "-";
+			l [0] += "-";
+		}
+		//s += (String.valueOf(file.length() + String.valueOf(month) + String.valueOf(day) + String.valueOf(hour) + ":" + String.valueOf(minute) + file.getName()));
+		l[1] = String.valueOf(file.length());
+		l[2] = String.valueOf(month);
+		l[3] = String.valueOf(day);
+		l[4] = String.valueOf(hour) + ":" + String.valueOf(minute);
+		l[5] = file.getName();
+
+		return l;
 	}
 }

@@ -17,12 +17,13 @@ public class DivTouch {
 		
 		for(int i = 0; i < args.length; i++){
 			Matcher m = p.matcher(args[i]);
+			
 			if(m.find() && ! (new File(args[i]).exists())){
-				livdiv.divCreate(args[i]);
+				livdiv.divCreate(new File(args[i]));
 			}else if(m.find()){
 				String tmp = args[i] + pid;
 				File file = new File(tmp);
-				livdiv.divChangeMtime(args[i], tmp);
+				livdiv.divChangeMtime(new File(args[i]), new File(tmp));
 				if(file.isFile()){
 					file.delete();
 				}

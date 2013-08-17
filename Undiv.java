@@ -5,14 +5,15 @@ import java.util.regex.Pattern;
 
 public class UnDiv {
 	public static void main(String[] args) {
-		Libdiv livdiv = new Libdiv();
+		DividedDataController dividedDataController = new DividedDataController();
 		Pattern p = Pattern.compile("\\.div$|\\.div/$");
+		Matcher m;
 		
 		for(int i = 0; i < args.length; i++){
-			Matcher m = p.matcher(args[i]);
+			m = p.matcher(args[i]);
 			if(m.find()){
-				livdiv.divRestore(args[i]);
+				dividedDataController.combinData(args[i]);
 			}
 		}
 	}
-}
+ }
